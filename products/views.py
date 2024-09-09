@@ -36,15 +36,16 @@ class ProductDetailAPIView(APIView):
         return Response(serializer.data)
 
     def put(self, request, pk):
-        Product = self.get_object(pk)
+        product = self.get_object(pk)
         product_data = request.data.copy()
-        if 'image' not in request.data:
-            product_data['image'] = Product.image
-        serializer = ProductDetailSerializer(
-            Product, data=request.data, partial=True)
+        if 'image' not in request.data or request.data['image'] == '':
+            product_data['image'] = product.image
+        serializer = ProductDetailSerializer(product, data=product_data, partial=True)
+
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
+
 
     def delete(self, request, pk):
         Product = self.get_object(pk)
