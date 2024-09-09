@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.exceptions import APIException
+from rest_framework.decorators import permission_classes
 
 
 class SignupView(APIView):
@@ -85,3 +86,11 @@ class UserProfileView(APIView):
         user = User.objects.get(username=username)
         serializer = UserSerializer(user)
         return Response(serializer.data)
+
+    def put(self, request, username):
+        user = User.objects.get(username=username)
+        user_data = request.data.copy()
+        serializer = UserSerializer(user, data=user_data, partial=True)
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            return Response(serializer.data)
