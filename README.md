@@ -139,6 +139,62 @@
 - **구현**: 상품 목록 조회 시 페이지네이션 및 필터링(검색 기능) 추가.
 
 ## ERD
+erDiagram
+    User {
+        int id
+        string username
+        string password
+        string email
+        string name
+        string nickname
+        date birth
+        string gender
+        string introduction
+    }
+
+    Product {
+        int id
+        string title
+        string description
+        string image
+        datetime created_at
+        datetime updated_at
+    }
+
+    User ||--o{ Product : "has many"
+    Product {
+        int id
+        string title
+        string description
+        string image
+        datetime created_at
+        datetime updated_at
+    }
+
+    Product {
+        int id
+        string title
+        string description
+        string image
+        datetime created_at
+        datetime updated_at
+    }
+
+    Product ||--o{ Comment : "has many"
+    Comment {
+        int id
+        text content
+        datetime created_at
+    }
+
+    User ||--o{ Comment : "has many"
+    Product ||--o{ Like : "has many"
+    Like {
+        int id
+        datetime created_at
+    }
+    
+    User ||--o{ Like : "has many"
 
 
 ## 프로젝트 파일 구조
