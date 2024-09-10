@@ -4,11 +4,13 @@ from .models import User
 from .validators import validate_signup
 from .serializers import UserSerializer
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework.exceptions import APIException
 from rest_framework.decorators import permission_classes
+from rest_framework import status
 
 
 class SignupView(APIView):
@@ -17,6 +19,7 @@ class SignupView(APIView):
         if not is_valid:
             return Response({'error': err_msg_list}, status=400)
         
+        # 사용자 생성
         user = User.objects.create_user(
             # **request.data
             username = request.data.get('username'),
@@ -27,17 +30,29 @@ class SignupView(APIView):
             last_name = request.data.get('last_name'),
             email = request.data.get('email'),
         )
+
+        # 사용자 정보 직렬화 및 JWT 토큰 생성
         serializer = UserSerializer(user)
         res_data = serializer.data
-        #token
         refresh = RefreshToken.for_user(user)
-        refresh_token = str(refresh)
-        access_token = str(refresh.access_token)
         res_data["tokens"] = {
-            "access": access_token,
-            "refresh": refresh_token
+            "access": str(refresh.access_token),
+            "refresh": str(refresh)
         }
-        return Response(res_data)
+        
+        return Response(res_data, status=201)
+    # 인증된 사용자만 접근 가능
+    @permission_classes([IsAuthenticated])
+
+    def delete(self, request):
+        user = request.user
+        
+        # 회원 탈퇴 처리
+        try:
+            user.delete()
+            return Response({'message': 'User account deleted successfully.'}, status=200)
+        except Exception as e:
+            raise APIException(f"An error occurred: {str(e)}")
 
 class SigninView(APIView):
     def post(self, request):
@@ -46,7 +61,7 @@ class SigninView(APIView):
         user=authenticate(username=username, password=password)
         
         if not user:
-            return Response({'error': '아이디 또는 비밀번호가 일치하지 않습니다.'}, status=400)
+            return Response({'error': 'no user data '}, status=400)
 
         serializer=UserSerializer(user)
         res_data = serializer.data
@@ -94,3 +109,22 @@ class UserProfileView(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data)
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def put(self, request):
+        user = request.user
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+
+        # Validate password change through the validator
+        is_valid, err_msg_list = validate_password_change(user, current_password, new_password)
+        if not is_valid:
+            return Response({"error": err_msg_list}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update password
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "비밀번호가 성공적으로 변경되었습니다."}, status=status.HTTP_200_OK)
