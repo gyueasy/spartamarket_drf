@@ -9,8 +9,9 @@ from rest_framework.permissions import IsAuthenticated
 from .serializers import (
     ProductSerializer,
     ProductDetailSerializer,
+    LikeSerializer
 )
-from .models import Product
+from .models import Product, Like
 from .filters import ProductFilter
 
 # 페이지네이션 설정
@@ -35,7 +36,6 @@ class ProductListAPIView(APIView):
         if serializer.is_valid(raise_exception=True):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-
 
 class ProductDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -63,3 +63,36 @@ class ProductDetailAPIView(APIView):
         Product = self.get_object(pk)
         Product.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class LikeProductView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, productId):
+        user = request.user
+        product = get_object_or_404(Product, id=productId)
+
+        if Like.objects.filter(user=user, product=product).exists():
+            return Response({'error': '이미 좋아요를 눌렀습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        Like.objects.create(user=user, product=product)
+        product.likes_count += 1
+        product.save()
+
+        return Response({'message': '게시글에 좋아요를 눌렀습니다.'}, status=status.HTTP_201_CREATED)
+
+class UnlikeProductView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def delete(self, request, productId):
+        user = request.user
+        product = get_object_or_404(Product, id=productId)
+
+        like = Like.objects.filter(user=user, product=product).first()
+        if not like:
+            return Response({'error': '좋아요를 누르지 않았습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        like.delete()
+        product.likes_count -= 1
+        product.save()
+
+        return Response({'message': '게시글 좋아요가 취소되었습니다.'}, status=status.HTTP_204_NO_CONTENT)
