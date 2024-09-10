@@ -1,4 +1,4 @@
-from .models import User
+from .models import User, Follow
 from rest_framework import serializers
 
 class UserSerializer(serializers.ModelSerializer):
@@ -6,3 +6,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'username', 'nickname', 'birth', 'introduction')
 
+class FollowListSerializer(serializers.ModelSerializer):
+    follower = UserSerializer()
+    followed = UserSerializer()
+
+    class Meta:
+        model = Follow
+        fields = ['follower', 'followed']
