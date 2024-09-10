@@ -1,7 +1,9 @@
 from django.shortcuts import get_object_or_404
+from rest_framework import status, generics
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from .serializers import (
@@ -9,13 +11,23 @@ from .serializers import (
     ProductDetailSerializer,
 )
 from .models import Product
+from .filters import ProductFilter
 
+# 페이지네이션 설정
+class ProductPagination(PageNumberPagination):
+    page_size = 10  # 페이지당 10개의 상품을 보여줌
+    page_size_query_param = 'page_size'  # URL에서 페이지 크기를 조정 가능
+    max_page_size = 100  # 최대 페이지 크기
 
 class ProductListAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProductFilter
+
     def get(self, request):
-        Products = Product.objects.all()
-        serializer = ProductSerializer(Products, many=True)
+        products = Product.objects.all()
+        filtered_products = ProductFilter(request.GET, queryset=products).qs
+        serializer = ProductSerializer(filtered_products, many=True)
         return Response(serializer.data)
 
     def post(self, request):
